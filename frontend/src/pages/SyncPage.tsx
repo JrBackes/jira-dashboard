@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchSyncStatus, triggerSync } from '../api/sync';
 
@@ -7,6 +8,8 @@ function formatDateTime(iso: string): string {
 
 export function SyncPage() {
   const queryClient = useQueryClient();
+  const [isTriggering, setIsTriggering] = useState(false);
+  const [triggerError, setTriggerError] = useState<string | null>(null);
 
   const { data: statuses } = useQuery({
     queryKey: ['sync-status'],
@@ -16,9 +19,23 @@ export function SyncPage() {
 
   const isAnyRunning = statuses?.some((s) => s.last_run?.status === 'running') ?? false;
 
+  // Assim que o polling confirma que nada mais está rodando, sai do estado "clicado".
+  useEffect(() => {
+    if (!isAnyRunning) setIsTriggering(false);
+  }, [isAnyRunning]);
+
+  const isUpdating = isTriggering || isAnyRunning;
+
   const handleClick = async () => {
-    await triggerSync();
-    queryClient.invalidateQueries({ queryKey: ['sync-status'] });
+    setTriggerError(null);
+    setIsTriggering(true); // feedback imediato no clique, antes da resposta do servidor
+    try {
+      await triggerSync();
+      await queryClient.invalidateQueries({ queryKey: ['sync-status'] });
+    } catch {
+      setIsTriggering(false);
+      setTriggerError('Não consegui iniciar a atualização — tente de novo.');
+    }
   };
 
   return (
@@ -26,9 +43,10 @@ export function SyncPage() {
       <h2>Atualização</h2>
       <p>Sincroniza os dados do Jira (TEC e CAP) com o banco da dashboard.</p>
 
-      <button onClick={handleClick} disabled={isAnyRunning}>
-        {isAnyRunning ? 'Atualizando...' : 'Atualizar agora'}
+      <button onClick={handleClick} disabled={isUpdating}>
+        {isUpdating ? 'Atualizando...' : 'Atualizar agora'}
       </button>
+      {triggerError && <p style={{ color: '#dc2626' }}>{triggerError}</p>}
 
       {statuses && (
         <table className="workload-table" style={{ marginTop: '1.5rem' }}>

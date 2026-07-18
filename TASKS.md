@@ -30,7 +30,7 @@ Checklist vivo. Ao pegar uma tarefa, marque em andamento (comentário ou mova pa
 - [x] `[Front]` 2026-07-18 — `CurrentSprintPage` (burndown, scope changes, velocity)
 - [x] `[Front]` 2026-07-18 — `PeoplePage` (carga de trabalho, destaques)
 - [x] `[Front]` 2026-07-18 — `SprintWorkloadTable` (tabela colaborador×status com contagem + tempo) na `CurrentSprintPage` — `tsc --noEmit` limpo, módulos validados via Vite
-- [x] `[Front]` 2026-07-18 — `SyncPage` (`/atualizacao`) — botão "Atualizar agora" + tabela de status/última atualização por site, polling automático enquanto algum site está `running`
+- [x] `[Front]` 2026-07-18 — `SyncPage` (`/atualizacao`) — botão "Atualizar agora" + tabela de status/última atualização por site, polling automático enquanto algum site está `running`. Botão mostra "Atualizando..." (e fica desabilitado) imediatamente ao clicar — não espera o primeiro poll confirmar, usa estado local (`isTriggering`) até o polling assumir.
 - [ ] `[Front]` (pendente) Validação visual no navegador — Claude Code não tem ferramenta de screenshot/browser neste ambiente; abrir http://localhost:5173 manualmente para confirmar renderização
 
 ## Docs
