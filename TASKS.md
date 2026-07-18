@@ -30,7 +30,8 @@ Checklist vivo. Ao pegar uma tarefa, marque em andamento (comentário ou mova pa
 - [x] `[Front]` 2026-07-18 — `CurrentSprintPage` (burndown, scope changes, velocity)
 - [x] `[Front]` 2026-07-18 — `PeoplePage` (carga de trabalho, destaques)
 - [x] `[Front]` 2026-07-18 — `SprintWorkloadTable` (tabela colaborador×status com contagem + tempo) na `CurrentSprintPage` — `tsc --noEmit` limpo, módulos validados via Vite
-- [x] `[Front]` 2026-07-18 — `SyncPage` (`/atualizacao`) — botão "Atualizar agora" + tabela de status/última atualização por site, polling automático enquanto algum site está `running`. Botão mostra "Atualizando..." (e fica desabilitado) imediatamente ao clicar — não espera o primeiro poll confirmar, usa estado local (`isTriggering`) até o polling assumir.
+- [x] `[Front]` 2026-07-18 — `SyncPage` (`/atualizacao`) — botão "Atualizar agora" + tabela de status/última atualização por site, polling automático enquanto algum site está `running`. Botão mostra "Atualizando..." (e fica desabilitado) imediatamente ao clicar.
+- [x] `[Front]` 2026-07-18 — Corrigido: botão ficava preso em "Atualizando..." e outras páginas não atualizavam sem reload manual. `refetchInterval` trocado de função (inspecionando `query.state.data`) para valor reativo simples (`isTriggering || hasSeenRunning`); adicionado gate "só destrava depois de confirmar que viu `running` pelo menos uma vez"; timeout de segurança de 3min pra nunca travar pra sempre; e `queryClient.invalidateQueries()` (sem filtro) disparado quando uma atualização termina, pra sprints/pessoas virem atualizados na próxima navegação sem precisar dar reload na página.
 - [ ] `[Front]` (pendente) Validação visual no navegador — Claude Code não tem ferramenta de screenshot/browser neste ambiente; abrir http://localhost:5173 manualmente para confirmar renderização
 
 ## Docs
