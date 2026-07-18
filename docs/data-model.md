@@ -24,7 +24,9 @@ Sprint de um board. `id`, `board_id` (FK), `jira_sprint_id`, `name`, `state` (`f
 Pessoa canônica (`people`: `id`, `display_name`, `email`) separada de identidade por site (`person_identities`: `id`, `person_id` FK, `site_id` FK, `jira_account_id`, `display_name`, `email`, `active`), porque o `accountId` do Jira é por instância Atlassian — a mesma pessoa em TEC e CAP tem dois `accountId` diferentes. O vínculo entre identidades é resolvido manualmente (tipicamente por e-mail), não por lógica automática.
 
 ### `issues`
-`id`, `site_id` (FK), `project_id` (FK), `jira_issue_id`, `jira_key`, `issue_type`, `summary`, `status`, `status_category`, `priority`, `assignee_person_id` (FK, nullable), `reporter_person_id` (FK, nullable), `story_points` (nullable), `created_at`, `updated_at`, `resolved_at`, `raw_payload` (JSONB).
+`id`, `site_id` (FK), `project_id` (FK), `jira_issue_id`, `jira_key`, `issue_type`, `summary`, `status`, `status_category`, `priority`, `assignee_person_id` (FK, nullable), `reporter_person_id` (FK, nullable), `story_points` (nullable, **não usado pelo time** — ver abaixo), `original_estimate_seconds` (nullable), `time_spent_seconds` (nullable), `created_at`, `updated_at`, `resolved_at`, `raw_payload` (JSONB).
+
+`original_estimate_seconds`/`time_spent_seconds` vêm dos campos nativos de time tracking do Jira (`timeoriginalestimate`/`timespent`, em segundos) — o time não estima em Story Points, estima em tempo. Usados na tabela colaborador×status da Sprint Atual: estimativa original enquanto a issue não chegou em "To Test" (ver `docs/workflow-do-time.md`), tempo gasto (apontamento manual) depois disso — decidido pelo maior status já atingido no **histórico** da issue (`issue_field_changes`), não só o status atual.
 
 Unique constraint: `(site_id, jira_issue_id)`. Índice em `updated_at` (crítico para sync incremental).
 

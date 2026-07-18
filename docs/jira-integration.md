@@ -48,6 +48,19 @@ Escopo necessário nos tokens: `read:jira-work`, `read:jira-user`, e acesso a ch
 
 **Observação:** o time do TEC não usa Story Points (0 de 9054 issues têm o campo preenchido) — métricas em pontos (burndown/velocity por pontos) sempre retornam 0 até o time começar a estimar. As métricas por contagem de itens funcionam normalmente.
 
+Nota: há também um segundo campo parecido chamado literalmente "Story point estimate" (`customfield_10016` em ambos os sites) — não é o mesmo campo que `find_story_points_field` resolve pra TEC (que pega `customfield_10034` "Story Points", primeiro nome que bate na lista). Tem 37 issues preenchidas no TEC, pouco usado — não vale a pena resolver a ambiguidade agora porque o time estima em **tempo**, não em pontos (ver campos nativos de time tracking abaixo).
+
+## Campos nativos de time tracking (não são customfield — nome de sistema fixo)
+
+O time estima em tempo, não em Story Points. Campos de sistema do Jira, pedidos direto por nome (sem precisar `get_fields()`):
+
+| Campo Jira | Nome de sistema | Uso na dashboard |
+|---|---|---|
+| Estimativa original | `timeoriginalestimate` (segundos) | Exibido enquanto a issue não chegou em "To Test" no histórico. ~6200 issues preenchidas no TEC. |
+| Tempo gasto | `timespent` (segundos, apontamento manual "Log Work") | Exibido depois que a issue já chegou em "To Test" ou além. ~6500 issues preenchidas no TEC. |
+
+Ver `docs/workflow-do-time.md` para a ordem do fluxo usada pra decidir qual dos dois campos mostrar, e `app/services/sprint_metrics.sprint_workload_by_status_and_person` para a lógica.
+
 ## Estratégia de sync
 
 Ver `AGENTS.md` (seção Regras fáceis de esquecer) e `services/sync_service.py`: bootstrap de metadata (projeto → boards → sprints) → issues via JQL incremental (`updated >= cursor`) → changelog em lote para issues tocadas no ciclo → atualização de `sync_cursors` e `sync_runs`.

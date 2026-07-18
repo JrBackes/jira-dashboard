@@ -30,6 +30,9 @@ class Issue(Base):
     reporter_person_id: Mapped[int | None] = mapped_column(ForeignKey("people.id"), nullable=True, index=True)
 
     story_points: Mapped[float | None] = mapped_column(Numeric(6, 2), nullable=True)
+    # Segundos — campos nativos de time tracking do Jira (o time não usa Story Points).
+    original_estimate_seconds: Mapped[int | None] = mapped_column(nullable=True)
+    time_spent_seconds: Mapped[int | None] = mapped_column(nullable=True)
 
     created_at: Mapped[datetime] = mapped_column()
     updated_at: Mapped[datetime] = mapped_column()

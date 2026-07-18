@@ -38,6 +38,16 @@ export interface VelocityPoint {
   delivered_points: number;
 }
 
+export interface WorkloadCell {
+  count: number;
+  seconds: number;
+}
+
+export interface WorkloadByStatus {
+  statuses: string[];
+  rows: { person: string; cells: Record<string, WorkloadCell> }[];
+}
+
 export function fetchSprints(projectKey?: string, state?: string): Promise<Sprint[]> {
   const params = new URLSearchParams();
   if (projectKey) params.set('project', projectKey);
@@ -60,4 +70,8 @@ export function fetchSprintBurndown(sprintId: number): Promise<BurndownPoint[]> 
 
 export function fetchSprintVelocityHistory(sprintId: number): Promise<VelocityPoint[]> {
   return apiGet<VelocityPoint[]>(`/api/sprints/${sprintId}/velocity-history`);
+}
+
+export function fetchSprintWorkloadByStatus(sprintId: number): Promise<WorkloadByStatus> {
+  return apiGet<WorkloadByStatus>(`/api/sprints/${sprintId}/workload-by-status`);
 }

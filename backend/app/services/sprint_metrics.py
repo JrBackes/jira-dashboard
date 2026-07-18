@@ -5,8 +5,10 @@ from datetime import date, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
-from app.models import Board, Issue, IssueFieldChange, IssueSprint, Project, Sprint
-from app.services.status_order import sort_statuses
+from app.models import Board, Issue, IssueFieldChange, IssueSprint, Person, Project, Sprint
+from app.services.status_order import sort_status_list, sort_statuses, status_rank
+
+_TO_TEST_RANK = status_rank("to test")
 
 
 def list_sprints(db: Session, project_key: str | None = None, state: str | None = None) -> list[Sprint]:
@@ -136,3 +138,66 @@ def velocity_history(db: Session, board_id: int, limit: int = 6) -> list[dict]:
             }
         )
     return history
+
+
+def sprint_workload_by_status_and_person(db: Session, sprint_id: int) -> dict:
+    """Matriz colaborador x status na sprint atual, com tempo por célula.
+
+    Tempo = "Estimativa original" (timeoriginalestimate) enquanto a issue nunca chegou em
+    "To Test"; "Tempo gasto" (timespent, apontamento manual) depois que já chegou — decidido
+    pelo maior rank de status já atingido no HISTÓRICO da issue (issue_field_changes), não só
+    o status atual (uma issue pode estar bloqueada em "Is Blocked" hoje mas já ter passado
+    por Testing antes de travar).
+    """
+    issues = (
+        db.query(Issue)
+        .join(IssueSprint, IssueSprint.issue_id == Issue.id)
+        .filter(
+            IssueSprint.sprint_id == sprint_id,
+            IssueSprint.is_current.is_(True),
+            Issue.assignee_person_id.isnot(None),
+        )
+        .all()
+    )
+    if not issues:
+        return {"statuses": [], "rows": []}
+
+    issue_ids = [issue.id for issue in issues]
+    status_changes = (
+        db.query(IssueFieldChange.issue_id, IssueFieldChange.to_value)
+        .filter(IssueFieldChange.issue_id.in_(issue_ids), IssueFieldChange.field_name == "status")
+        .all()
+    )
+    max_rank_reached: dict[int, int] = {}
+    for issue_id, to_value in status_changes:
+        rank = status_rank(to_value or "")
+        if rank > max_rank_reached.get(issue_id, -1):
+            max_rank_reached[issue_id] = rank
+
+    people_by_id = {
+        person.id: person
+        for person in db.query(Person).filter(Person.id.in_({issue.assignee_person_id for issue in issues}))
+    }
+
+    matrix: dict[str, dict[str, dict[str, int]]] = {}
+    all_statuses: set[str] = set()
+    for issue in issues:
+        person = people_by_id.get(issue.assignee_person_id)
+        if person is None:
+            continue
+        reached_rank = max(max_rank_reached.get(issue.id, -1), status_rank(issue.status))
+        has_reached_to_test = reached_rank >= _TO_TEST_RANK
+        seconds = (issue.time_spent_seconds if has_reached_to_test else issue.original_estimate_seconds) or 0
+
+        all_statuses.add(issue.status)
+        row = matrix.setdefault(person.display_name, {})
+        cell = row.setdefault(issue.status, {"count": 0, "seconds": 0})
+        cell["count"] += 1
+        cell["seconds"] += seconds
+
+    ordered_statuses = sort_status_list(all_statuses)
+    rows = [
+        {"person": person_name, "cells": cells}
+        for person_name, cells in sorted(matrix.items(), key=lambda item: item[0])
+    ]
+    return {"statuses": ordered_statuses, "rows": rows}

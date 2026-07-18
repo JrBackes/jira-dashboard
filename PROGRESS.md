@@ -2,11 +2,18 @@
 
 ## Estado Atual
 
-- **Pronto:** setup completo de ponta a ponta, e **primeiro sync real bem-sucedido** contra os dois sites Jira de produção (TEC e CAP), após encontrar e corrigir 5 bugs que só apareciam com dados reais (ver `docs/decisions/0003-bugs-primeiro-sync-real.md`). Dados reais no banco: TEC (9054 issues, 142 sprints, 50 pessoas, 10000 mudanças de changelog, 16525 vínculos issue↔sprint), CAP (34 issues, 3 sprints, 4 pessoas, 70 mudanças, 28 vínculos). Rotas de métricas validadas com dados reais (sprint ativa "[2026] W29", carga de trabalho por pessoa).
+- **Pronto:** setup completo de ponta a ponta, primeiro sync real bem-sucedido (TEC e CAP), fluxo de status do time totalmente registrado (`docs/workflow-do-time.md`), e nova tabela **colaborador × status** com tempo (estimativa original antes de "To Test", tempo gasto depois) na tela Sprint Atual — validada com dados reais.
 - **Em andamento:** nada em execução — ponto de partida limpo.
-- **Próximo passo:** abrir http://localhost:5173 (rodando) e conferir visualmente as 3 páginas com os dados reais sincronizados. Depois, decidir se/quando configurar o agendamento automático do sync (cron do host, ver `docs/jira-integration.md`).
+- **Próximo passo:** abrir http://localhost:5173 (rodando) e conferir visualmente as 3 páginas com os dados reais, incluindo a nova tabela de carga de trabalho por status. Depois, decidir se/quando configurar o agendamento automático do sync (cron do host, ver `docs/jira-integration.md`).
 
 ## Log
+
+### 2026-07-18 (cont. 2) — Claude Code
+- Nova funcionalidade na Sprint Atual: tabela colaborador×status com contagem de issues + tempo por célula, a pedido do usuário.
+- Descoberta ao investigar: o time não usa Story Points, mas usa os campos **nativos** de time tracking do Jira — "Estimativa original" (`timeoriginalestimate`, ~6200 issues preenchidas no TEC) e "Tempo gasto" (`timespent`, apontamento manual, ~6500 issues no TEC). Confirmado com o usuário via perguntas antes de implementar.
+- Regra de negócio implementada: para cada issue, mostra a estimativa original **enquanto ela nunca chegou em "To Test"** no histórico de status (`issue_field_changes`, não só o status atual — uma issue "Is Blocked" hoje pode já ter passado por Testing antes); depois que chegou, mostra o tempo gasto (apontado manualmente, não tempo decorrido calculado).
+- Adicionado `original_estimate_seconds`/`time_spent_seconds` em `issues` (migration `7dacb75f4e4d`), `sprint_workload_by_status_and_person` em `sprint_metrics.py`, rota `/api/sprints/{id}/workload-by-status`, componente `SprintWorkloadTable` no frontend. Re-sync completo pra popular os novos campos nas issues já existentes.
+- `status_order.py` ganhou `status_rank`/`sort_status_list` públicos, reusados pra decidir se uma issue já passou por "To Test".
 
 ### 2026-07-18 (cont.) — Claude Code
 - Usuário explicou 1 a 1, ao vivo, o significado de cada status que eu não sabia (`Em andamento`, `Teste`, `UNDER PR REVIEW`, `Reviewed`, `Waiting Store Approval`). Corrigiu duas suposições erradas que eu tinha feito no ajuste anterior: `Under PR Review` **não é** sinônimo de `To Review` (é revisão de código/PR, etapa própria, antes de ir pra homologação); `Reviewed` **não é** sinônimo de `Review` (é o estado final, pós-produção, revisado por todos inclusive PO). Também corrigiu a ordem: `Deploy para prod` vem **antes** de `To Review`, não depois.

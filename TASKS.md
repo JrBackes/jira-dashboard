@@ -18,6 +18,8 @@ Checklist vivo. Ao pegar uma tarefa, marque em andamento (comentário ou mova pa
 - [x] `[Back]` 2026-07-18 — CLI de sync (`cli/sync.py`) — `python -m app.cli.sync --site TEC|CAP|--all` (sem subcomando `run` — comportamento padrão do Typer com um único comando)
 - [x] `[Back]` 2026-07-18 — `sprint_metrics.py` + rotas de sprint (summary, scope-changes, burndown, velocity-history) — validado com dados sintéticos (rollback ao final, banco limpo)
 - [x] `[Back]` 2026-07-18 — `person_metrics.py` + rotas de pessoa (workload, highlights) — validado com dados sintéticos
+- [x] `[Back]` 2026-07-18 — `original_estimate_seconds`/`time_spent_seconds` em `issues` (campos nativos `timeoriginalestimate`/`timespent`) + migration + re-sync (6224/6504 issues preenchidas no TEC)
+- [x] `[Back]` 2026-07-18 — `sprint_workload_by_status_and_person` + rota `/api/sprints/{id}/workload-by-status` — matriz colaborador×status com tempo (estimativa antes de "To Test", tempo gasto depois) — validado com dados reais da sprint ativa
 - [ ] `[Back]` (conhecido, não bloqueante) `from_status_category`/`to_status_category` em `issue_field_changes` não são preenchidos ainda no sync — hoje só `from_value`/`to_value` (nome do status). Resolver quando alguma métrica precisar filtrar por categoria de status na mudança.
 
 ## Frontend
@@ -26,6 +28,7 @@ Checklist vivo. Ao pegar uma tarefa, marque em andamento (comentário ou mova pa
 - [x] `[Front]` 2026-07-18 — `OverviewPage` (seletor de site/projeto TEC/CAP)
 - [x] `[Front]` 2026-07-18 — `CurrentSprintPage` (burndown, scope changes, velocity)
 - [x] `[Front]` 2026-07-18 — `PeoplePage` (carga de trabalho, destaques)
+- [x] `[Front]` 2026-07-18 — `SprintWorkloadTable` (tabela colaborador×status com contagem + tempo) na `CurrentSprintPage` — `tsc --noEmit` limpo, módulos validados via Vite
 - [ ] `[Front]` (pendente) Validação visual no navegador — Claude Code não tem ferramenta de screenshot/browser neste ambiente; abrir http://localhost:5173 manualmente para confirmar renderização
 
 ## Docs
@@ -48,3 +51,4 @@ Checklist vivo. Ao pegar uma tarefa, marque em andamento (comentário ou mova pa
 - Time do TEC não usa Story Points — métricas em pontos sempre 0 até o time estimar; métricas por contagem de itens funcionam normalmente.
 - `list_people` (Por Pessoa) só mostra quem já foi **assignee** de alguma issue — exclui reporters/autores de changelog que nunca pegaram uma issue pra si (gente de outras áreas, bots como "Automation for Jira"). TEC: 20 pessoas, CAP: 2 pessoas.
 - Carga de trabalho (`person_workload`) e contagem por status da sprint (`sprint_status_counts`) agrupam pelo `status` granular do time, não mais pelas 3 categorias genéricas do Jira — ordenados pela ordem lógica do fluxo (`app/services/status_order.py`). Fluxo completo (11 etapas, Backlog → ... → Reviewed) com o significado de cada status registrado em `docs/workflow-do-time.md`, explicado 1 a 1 pelo usuário — inclui correções importantes sobre suposições erradas que eu tinha feito antes (`Under PR Review` não é sinônimo de `To Review`; `Reviewed` é o estado final pós-produção, não sinônimo de `Review`; `Deploy para prod` vem antes de `To Review`, não depois).
+- Time do TEC estima em **tempo** (campos nativos `timeoriginalestimate`/`timespent`), não em Story Points — a tabela colaborador×status da Sprint Atual usa isso: estimativa original antes da issue chegar em "To Test" (checando o **histórico** de status, não só o status atual — uma issue pode estar "Is Blocked" hoje já tendo passado por Testing antes), tempo gasto (apontamento manual) depois.

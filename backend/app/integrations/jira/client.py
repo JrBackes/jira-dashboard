@@ -15,6 +15,8 @@ DEFAULT_SEARCH_FIELDS = [
     "created",
     "updated",
     "resolutiondate",
+    "timeoriginalestimate",
+    "timespent",
 ]
 # Não existem campos literais "sprint"/"closedSprints" no Platform Search API v3 — isso é
 # só da Agile API. Aqui o campo Sprint é um customfield (ver mappers.find_sprint_field),

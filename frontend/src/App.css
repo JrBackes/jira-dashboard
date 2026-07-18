@@ -38,3 +38,21 @@
 section {
   margin-top: 2rem;
 }
+
+.workload-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.workload-table th,
+.workload-table td {
+  border: 1px solid #e2e8f0;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.workload-table th {
+  background: #f8fafc;
+}

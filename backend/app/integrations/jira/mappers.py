@@ -68,6 +68,10 @@ def map_issue(issue: dict, story_points_field: str | None, sprint_field: str | N
         "assignee": fields.get("assignee"),
         "reporter": fields.get("reporter"),
         "story_points": fields.get(story_points_field) if story_points_field else None,
+        # Campos nativos de time tracking do Jira (system fields, não customfield — nome fixo).
+        # O time não usa Story Points; usa "Estimativa original" e apontamento manual de horas.
+        "original_estimate_seconds": fields.get("timeoriginalestimate"),
+        "time_spent_seconds": fields.get("timespent"),
         "created_at": parse_jira_datetime(fields.get("created")),
         "updated_at": parse_jira_datetime(fields.get("updated")),
         "resolved_at": parse_jira_datetime(fields.get("resolutiondate")),

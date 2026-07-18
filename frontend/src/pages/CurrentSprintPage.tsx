@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { BurndownChart } from '../components/charts/BurndownChart';
 import { VelocityChart } from '../components/charts/VelocityChart';
+import { SprintWorkloadTable } from '../components/SprintWorkloadTable';
 import {
   fetchSprintBurndown,
   fetchSprintScopeChanges,
   fetchSprintSummary,
   fetchSprintVelocityHistory,
+  fetchSprintWorkloadByStatus,
   fetchSprints,
 } from '../api/sprints';
 import { useSelectedProject } from '../hooks/useSelectedProject';
@@ -40,6 +42,11 @@ export function CurrentSprintPage() {
     queryFn: () => fetchSprintVelocityHistory(sprintId!),
     enabled: !!sprintId,
   });
+  const { data: workloadByStatus } = useQuery({
+    queryKey: ['sprint-workload-by-status', sprintId],
+    queryFn: () => fetchSprintWorkloadByStatus(sprintId!),
+    enabled: !!sprintId,
+  });
 
   if (!activeSprints) return <p>Carregando...</p>;
   if (!sprint) return <p>Nenhuma sprint ativa encontrada para {projectKey}. Rode o sync do Jira primeiro.</p>;
@@ -57,6 +64,16 @@ export function CurrentSprintPage() {
               <li key={status}>{status}: {count}</li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {workloadByStatus && (
+        <section>
+          <h3>Carga de trabalho por status e colaborador</h3>
+          <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
+            Tempo = estimativa original antes de chegar em "To Test"; tempo gasto (apontado manualmente) depois disso.
+          </p>
+          <SprintWorkloadTable data={workloadByStatus} />
         </section>
       )}
 

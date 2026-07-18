@@ -41,3 +41,9 @@ def sprint_burndown(sprint_id: int, db: Session = Depends(get_db)):
 def sprint_velocity_history(sprint_id: int, limit: int = 6, db: Session = Depends(get_db)):
     sprint = _get_sprint_or_404(db, sprint_id)
     return sprint_metrics.velocity_history(db, sprint.board_id, limit=limit)
+
+
+@router.get("/{sprint_id}/workload-by-status")
+def sprint_workload_by_status(sprint_id: int, db: Session = Depends(get_db)):
+    _get_sprint_or_404(db, sprint_id)
+    return sprint_metrics.sprint_workload_by_status_and_person(db, sprint_id)
