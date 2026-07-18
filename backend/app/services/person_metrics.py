@@ -4,19 +4,16 @@ from collections import Counter
 
 from sqlalchemy.orm import Session
 
-from app.models import Issue, IssueSprint, Person, PersonIdentity, Project, Site
+from app.models import Issue, IssueSprint, Person, Project
 
 
 def list_people(db: Session, project_key: str | None = None) -> list[Person]:
-    query = db.query(Person)
+    """Só pessoas que já foram assignee de alguma issue — exclui reporters/autores de
+    changelog que nunca pegaram uma issue pra si (ex: gente de outras áreas que só abriu
+    um chamado, bots como "Automation for Jira")."""
+    query = db.query(Person).join(Issue, Issue.assignee_person_id == Person.id).distinct()
     if project_key:
-        query = (
-            query.join(PersonIdentity, PersonIdentity.person_id == Person.id)
-            .join(Site, Site.id == PersonIdentity.site_id)
-            .join(Project, Project.site_id == Site.id)
-            .filter(Project.jira_key == project_key)
-            .distinct()
-        )
+        query = query.join(Project, Project.id == Issue.project_id).filter(Project.jira_key == project_key)
     return query.order_by(Person.display_name).all()
 
 
