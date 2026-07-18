@@ -1,7 +1,11 @@
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { statusCategoryLabel } from '../../lib/statusCategory';
 
 export function WorkloadBarChart({ data }: { data: Record<string, number> }) {
-  const chartData = Object.entries(data).map(([statusCategory, count]) => ({ statusCategory, count }));
+  const chartData = Object.entries(data).map(([statusCategory, count]) => ({
+    statusCategory: statusCategoryLabel(statusCategory),
+    count,
+  }));
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={chartData}>

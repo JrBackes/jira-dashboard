@@ -9,6 +9,7 @@ import {
   fetchSprints,
 } from '../api/sprints';
 import { useSelectedProject } from '../hooks/useSelectedProject';
+import { statusCategoryLabel } from '../lib/statusCategory';
 
 export function CurrentSprintPage() {
   const { projectKey } = useSelectedProject();
@@ -54,7 +55,7 @@ export function CurrentSprintPage() {
           <h3>Contagem por status</h3>
           <ul>
             {Object.entries(summary.status_counts).map(([status, count]) => (
-              <li key={status}>{status}: {count}</li>
+              <li key={status}>{statusCategoryLabel(status)}: {count}</li>
             ))}
           </ul>
         </section>
