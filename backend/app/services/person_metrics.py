@@ -5,6 +5,7 @@ from collections import Counter
 from sqlalchemy.orm import Session
 
 from app.models import Issue, IssueSprint, Person, Project
+from app.services.status_order import sort_statuses
 
 
 def list_people(db: Session, project_key: str | None = None) -> list[Person]:
@@ -22,11 +23,13 @@ def get_person(db: Session, person_id: int) -> Person | None:
 
 
 def person_workload(db: Session, person_id: int, project_key: str | None = None) -> dict[str, int]:
+    """Agrupa por status real (Backlog, To Do, In Progress, Is Blocked, To Test...), não pela
+    categoria genérica do Jira — o time tem um fluxo mais granular que 'new/indeterminate/done'."""
     query = db.query(Issue).filter(Issue.assignee_person_id == person_id, Issue.status_category != "done")
     if project_key:
         query = query.join(Project, Project.id == Issue.project_id).filter(Project.jira_key == project_key)
     issues = query.all()
-    return dict(Counter(issue.status_category for issue in issues))
+    return sort_statuses(dict(Counter(issue.status for issue in issues)))
 
 
 def person_highlights(db: Session, person_id: int, sprint_id: int | None = None) -> list[Issue]:

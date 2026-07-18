@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session
 
 from app.models import Board, Issue, IssueFieldChange, IssueSprint, Project, Sprint
+from app.services.status_order import sort_statuses
 
 
 def list_sprints(db: Session, project_key: str | None = None, state: str | None = None) -> list[Sprint]:
@@ -22,13 +23,15 @@ def get_sprint(db: Session, sprint_id: int) -> Sprint | None:
 
 
 def sprint_status_counts(db: Session, sprint_id: int) -> dict[str, int]:
+    """Agrupa por status real (Backlog, To Do, In Progress, Is Blocked, To Test...), não pela
+    categoria genérica do Jira — o time tem um fluxo mais granular que 'new/indeterminate/done'."""
     issues = (
         db.query(Issue)
         .join(IssueSprint, IssueSprint.issue_id == Issue.id)
         .filter(IssueSprint.sprint_id == sprint_id, IssueSprint.is_current.is_(True))
         .all()
     )
-    return dict(Counter(issue.status_category for issue in issues))
+    return sort_statuses(dict(Counter(issue.status for issue in issues)))
 
 
 def sprint_scope_changes(db: Session, sprint: Sprint) -> dict[str, list[dict]]:
