@@ -31,17 +31,18 @@ Checklist vivo. Ao pegar uma tarefa, marque em andamento (comentário ou mova pa
 ## Docs
 
 - [x] `[Docs]` 2026-07-18 — `AGENTS.md`, `CLAUDE.md`, `PROGRESS.md`, `TASKS.md`
-- [ ] `[Docs]` `docs/data-model.md` preenchido
-- [ ] `[Docs]` `docs/jira-integration.md` preenchido (incluindo nome real do customfield de Story Points por site, assim que descoberto)
+- [x] `[Docs]` 2026-07-18 — `docs/data-model.md` preenchido
+- [x] `[Docs]` 2026-07-18 — `docs/jira-integration.md` preenchido (customfields reais de Story Points e Sprint por site, formato real do changelog/bulkfetch, statusCategory.key)
 
 ## Pendências (aguardando o usuário)
 
-- [ ] Confirmar escopo dos tokens de API Jira gerados para TEC e CAP (`read:jira-work`, `read:jira-user`, changelog)
-- [ ] Configurar `.env` local com credenciais reais (TEC e CAP) — nunca commitar
-- [ ] Rodar primeiro sync real (`poetry run python -m app.cli.sync --all`, dentro de `backend/`) e validar dados reais nas telas
-- [ ] Confirmar visualmente no navegador (http://localhost:5173) que as 3 páginas renderizam corretamente
+- [x] 2026-07-18 — Tokens de API Jira gerados e `.env` preenchido para TEC e CAP
+- [x] 2026-07-18 — Primeiro sync real rodado com sucesso, após corrigir 5 bugs encontrados no processo (ver notas abaixo): TEC (9054 issues, 142 sprints, 50 pessoas, 10000 mudanças de changelog, 16525 vínculos issue↔sprint), CAP (34 issues, 3 sprints, 4 pessoas, 70 mudanças, 28 vínculos)
+- [ ] Confirmar visualmente no navegador (http://localhost:5173) que as 3 páginas renderizam corretamente com os dados reais
 
 ## Notas técnicas relevantes
 
 - CLI de sync não tem subcomando `run` — é `python -m app.cli.sync --site TEC|CAP` ou `--all` (comportamento padrão do Typer com um único comando registrado).
 - Ver `docs/decisions/0002-sem-poetry-no-dockerfile.md`: o Dockerfile do backend usa `pip install .` direto, não instala Poetry (causava crash `Illegal instruction` neste ambiente).
+- Ver `docs/decisions/0003-bugs-primeiro-sync-real.md`: cinco bugs encontrados e corrigidos rodando o primeiro sync contra o Jira real — limite de lote do `changelog/bulkfetch` (max ~1000), chave `changeHistories`/timestamp epoch no payload, colunas `from_value`/`to_value` precisam ser `Text`, campo Sprint é customfield (não `sprint`/`closedSprints` literal) — sem isso `issue_sprints` ficava vazia, e `statusCategory.key` em vez de `.name` (localizado) — sem isso workload/highlights/velocity nunca batiam com "done".
+- Time do TEC não usa Story Points — métricas em pontos sempre 0 até o time estimar; métricas por contagem de itens funcionam normalmente.

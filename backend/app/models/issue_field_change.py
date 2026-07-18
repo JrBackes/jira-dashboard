@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Index, String
+from sqlalchemy import ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -17,8 +17,9 @@ class IssueFieldChange(Base):
     jira_changelog_entry_id: Mapped[str] = mapped_column(String(64), unique=True)
 
     field_name: Mapped[str] = mapped_column(String(64), index=True)
-    from_value: Mapped[str | None] = mapped_column(String(1000), nullable=True)
-    to_value: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    # Text (não String limitado): mudanças em campos como description/Epic Name podem ter milhares de caracteres.
+    from_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    to_value: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     from_status_category: Mapped[str | None] = mapped_column(String(32), nullable=True)
     to_status_category: Mapped[str | None] = mapped_column(String(32), nullable=True)

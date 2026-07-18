@@ -15,9 +15,10 @@ DEFAULT_SEARCH_FIELDS = [
     "created",
     "updated",
     "resolutiondate",
-    "sprint",
-    "closedSprints",
 ]
+# Não existem campos literais "sprint"/"closedSprints" no Platform Search API v3 — isso é
+# só da Agile API. Aqui o campo Sprint é um customfield (ver mappers.find_sprint_field),
+# adicionado dinamicamente à lista de fields por quem monta a busca (sync_service).
 
 
 class JiraClient:
@@ -114,10 +115,18 @@ class JiraClient:
             if not next_page_token:
                 break
 
-    def fetch_changelogs_bulk(self, issue_ids: list[str]) -> list[dict]:
-        """POST /rest/api/3/changelog/bulkfetch — changelog de várias issues de uma vez."""
+    def fetch_changelogs_bulk(self, issue_ids: list[str], batch_size: int = 1000) -> list[dict]:
+        """POST /rest/api/3/changelog/bulkfetch — changelog de várias issues de uma vez.
+
+        A API rejeita (400) lotes grandes demais num único request — paginamos em
+        lotes de `batch_size` (1000 já confirmado como aceito) e concatenamos o resultado.
+        """
         if not issue_ids:
             return []
-        resp = self._client.post("/rest/api/3/changelog/bulkfetch", json={"issueIdsOrKeys": issue_ids})
-        resp.raise_for_status()
-        return resp.json()["issueChangeLogs"]
+        results: list[dict] = []
+        for start in range(0, len(issue_ids), batch_size):
+            batch = issue_ids[start : start + batch_size]
+            resp = self._client.post("/rest/api/3/changelog/bulkfetch", json={"issueIdsOrKeys": batch})
+            resp.raise_for_status()
+            results.extend(resp.json()["issueChangeLogs"])
+        return results

@@ -23,7 +23,7 @@ class Issue(Base):
     issue_type: Mapped[str] = mapped_column(String(64))
     summary: Mapped[str] = mapped_column(String(2000))
     status: Mapped[str] = mapped_column(String(128))
-    status_category: Mapped[str] = mapped_column(String(32))  # to do | in progress | done
+    status_category: Mapped[str] = mapped_column(String(32))  # new | indeterminate | done (statusCategory.key, não .name — .name é localizado)
     priority: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     assignee_person_id: Mapped[int | None] = mapped_column(ForeignKey("people.id"), nullable=True, index=True)

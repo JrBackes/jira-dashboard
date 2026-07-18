@@ -9,8 +9,9 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.integrations.jira.client import JiraClient
+from app.integrations.jira.client import DEFAULT_SEARCH_FIELDS, JiraClient
 from app.integrations.jira.mappers import (
+    find_sprint_field,
     find_story_points_field,
     map_board,
     map_changelog_entries,
@@ -118,8 +119,15 @@ def _resolve_person(db: Session, site: Site, account: dict | None) -> int | None
     return person.id
 
 
-def _upsert_issue(db: Session, site: Site, project: Project, issue_payload: dict, story_points_field: str | None) -> Issue:
-    data = map_issue(issue_payload, story_points_field)
+def _upsert_issue(
+    db: Session,
+    site: Site,
+    project: Project,
+    issue_payload: dict,
+    story_points_field: str | None,
+    sprint_field: str | None,
+) -> Issue:
+    data = map_issue(issue_payload, story_points_field, sprint_field)
     assignee_person_id = _resolve_person(db, site, data.pop("assignee"))
     reporter_person_id = _resolve_person(db, site, data.pop("reporter"))
     sprint_jira_ids = data.pop("sprint_jira_ids")
@@ -206,7 +214,10 @@ def sync_site(db: Session, site_key: str) -> SyncRun:
 
     try:
         with JiraClient(site_settings) as client:
-            story_points_field = find_story_points_field(client.get_fields())
+            all_fields = client.get_fields()
+            story_points_field = find_story_points_field(all_fields)
+            sprint_field = find_sprint_field(all_fields)
+            search_fields = [*DEFAULT_SEARCH_FIELDS, *(f for f in (story_points_field, sprint_field) if f)]
 
             # 1. Bootstrap: projeto (assumido == site) -> boards -> sprints
             project = _get_or_create_project(db, site, project_key, project_key, project_key)
@@ -225,8 +236,8 @@ def sync_site(db: Session, site_key: str) -> SyncRun:
 
             touched_issues: list[Issue] = []
             latest_updated: datetime | None = None
-            for issue_payload in client.iter_search_issues(jql):
-                issue = _upsert_issue(db, site, project, issue_payload, story_points_field)
+            for issue_payload in client.iter_search_issues(jql, fields=search_fields):
+                issue = _upsert_issue(db, site, project, issue_payload, story_points_field, sprint_field)
                 touched_issues.append(issue)
                 if issue.updated_at and (latest_updated is None or issue.updated_at > latest_updated):
                     latest_updated = issue.updated_at

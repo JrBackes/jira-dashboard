@@ -2,21 +2,24 @@
 
 ## Estado Atual
 
-- **Pronto:** setup completo de ponta a ponta — docs compartilhadas, docker-compose (Postgres + backend), schema PostgreSQL (12 tabelas, migration inicial via Alembic), `JiraClient` + pipeline de sync + CLI, rotas de métricas de sprint e de pessoa, frontend React+Vite com as 3 páginas (Visão Geral, Sprint Atual, Por Pessoa) consumindo a API real. Todas as camadas validadas rodando (Postgres saudável, `/api/health` e `/api/health/db` respondendo via container Docker, métricas testadas com dados sintéticos com rollback, frontend compilando limpo via `tsc` e Vite).
-- **Em andamento:** nada em execução — ponto de partida limpo para o próximo passo.
-- **Próximo passo:** preencher `.env` com credenciais reais do Jira (TEC e CAP) e rodar o primeiro sync real (`poetry run python -m app.cli.sync --all` dentro de `backend/`), depois abrir http://localhost:5173 para validar visualmente as telas com dados reais.
+- **Pronto:** setup completo de ponta a ponta, e **primeiro sync real bem-sucedido** contra os dois sites Jira de produção (TEC e CAP), após encontrar e corrigir 5 bugs que só apareciam com dados reais (ver `docs/decisions/0003-bugs-primeiro-sync-real.md`). Dados reais no banco: TEC (9054 issues, 142 sprints, 50 pessoas, 10000 mudanças de changelog, 16525 vínculos issue↔sprint), CAP (34 issues, 3 sprints, 4 pessoas, 70 mudanças, 28 vínculos). Rotas de métricas validadas com dados reais (sprint ativa "[2026] W29", carga de trabalho por pessoa).
+- **Em andamento:** nada em execução — ponto de partida limpo.
+- **Próximo passo:** abrir http://localhost:5173 (rodando) e conferir visualmente as 3 páginas com os dados reais sincronizados. Depois, decidir se/quando configurar o agendamento automático do sync (cron do host, ver `docs/jira-integration.md`).
 
 ## Log
 
 ### 2026-07-18 — Claude Code
-- Repositório criado em `~/Projects/jira-dashboard-mbc`, `git init` feito.
+- Repositório criado em `~/Projects/jira-dashboard-mbc`, `git init` feito, commit inicial (`cc3ffab`) e push para `https://github.com/JrBackes/jira-dashboard` (merge com README stub que o GitHub criou ao inicializar o repo).
 - Criada estrutura de documentação compartilhada entre Claude Code e Antigravity (`AGENTS.md`, `CLAUDE.md` stub, `PROGRESS.md`, `TASKS.md`, `docs/data-model.md`, `docs/jira-integration.md`, `docs/decisions/`).
 - Ambiente local preparado: Homebrew (`python@3.12`, `pipx`), Poetry via pipx. Docker Desktop iniciado.
-- `docker-compose.yml` com serviço `db` (Postgres 16) — validado saudável.
-- Skeleton do backend FastAPI (`core/config.py`, `core/db.py`, `/api/health`, `/api/health/db`) — validado localmente via `poetry run uvicorn`.
-- Schema PostgreSQL completo (sites, projects, boards, sprints, people/person_identities, issues, issue_sprints, issue_field_changes, sync_runs, sync_cursors) + migration inicial via Alembic — aplicada, 12 tabelas confirmadas.
-- `JiraClient` (Agile API + `/search/jql` + `changelog/bulkfetch` + `/field`), mappers, `sync_service.py` (pipeline bootstrap → issues → changelog) e CLI (`app.cli.sync`) — smoke-testado (falha esperada por falta de credenciais reais no `.env`, confirmando que a validação de config funciona).
-- `sprint_metrics.py` e `person_metrics.py` + rotas (`/api/sites`, `/api/sprints/...`, `/api/people/...`) — testados com dados sintéticos inseridos em transação com rollback (banco ficou limpo).
-- Frontend Vite+React+TS com React Query, Recharts, React Router: `OverviewPage`, `CurrentSprintPage`, `PeoplePage`, componentes de gráfico reutilizáveis. `tsc --noEmit` limpo; todos os módulos transpilam via Vite dev server. **Não foi possível tirar screenshot/validar visualmente no navegador** — este ambiente não tem ferramenta de browser/screenshot; recomendo abrir http://localhost:5173 manualmente para conferir.
-- Corrigido `backend/Dockerfile`: a primeira versão instalava Poetry dentro da imagem, o que causava crash (`Illegal instruction`) por causa de dependências transitivas do Poetry. Troquado para `pip install .` direto — build e `docker compose up` validados de ponta a ponta (health check respondendo via container). Decisão registrada em `docs/decisions/0002-sem-poetry-no-dockerfile.md`.
-- Pendências para o usuário: gerar tokens de API do Jira para TEC e CAP, preencher `.env`, rodar o primeiro sync real.
+- Setup completo de backend (FastAPI + Postgres + Alembic), sync (JiraClient + pipeline), rotas de métricas e frontend (React + Vite) — todas as camadas validadas rodando (ver commit inicial para detalhes).
+- **Preenchido `.env`** com credenciais reais do Jira para TEC e CAP (tokens gerados pelo usuário, nunca vistos/colados na conversa).
+- **Primeiro sync real rodado** — encontrou e corrigiu, nesta ordem, 5 bugs que só apareciam com dados reais de produção (todos documentados em `docs/decisions/0003-bugs-primeiro-sync-real.md`):
+  1. `changelog/bulkfetch` rejeita lote com todos os ~9000 issueIds de uma vez (400) — paginado em lotes de 1000.
+  2. Formato real do changelog é `issueChangeLogs[].changeHistories[]` (não `changeLog.histories[]`), e `created` é epoch em milissegundos (int), não ISO string — bug **silencioso** (sync completava com "success" processando 0 mudanças).
+  3. Colunas `from_value`/`to_value` (`String(1000)`) estouravam em campos como `description` — migradas para `Text` (migration `b71d46295ef3`).
+  4. Campo Sprint não existe como `sprint`/`closedSprints` literal no Platform Search API — é um customfield (`customfield_10020`, resolvido via `get_fields()`) que retorna a lista completa do histórico de sprints da issue. Sem isso, `issue_sprints` ficava **completamente vazia** — bug silencioso, nenhuma métrica de sprint funcionava.
+  5. `statusCategory.name` é localizado (retornava "Itens concluídos" em vez de "done" nesta instância PT-BR) — todo filtro `status_category == "done"` (workload, highlights, velocity) nunca batia. Corrigido para usar `statusCategory.key` (estável: `new`/`indeterminate`/`done`).
+- Dados reais confirmados corretos após as correções: sprint ativa real "[2026] W29" com burndown e contagem por status coerentes; carga de trabalho por pessoa validada contra query SQL direta.
+- Observação de negócio (não é bug): o time do TEC não usa Story Points — métricas em pontos (burndown/velocity por pontos) retornam 0 até o time passar a estimar; métricas por contagem de itens funcionam normalmente.
+- Pendência: validar visualmente no navegador (sem ferramenta de screenshot neste ambiente).
