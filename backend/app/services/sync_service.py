@@ -210,7 +210,7 @@ def sync_site(db: Session, site_key: str) -> SyncRun:
 
     sync_run = SyncRun(site_id=site.id, entity_type="full", started_at=datetime.now(timezone.utc), status="running")
     db.add(sync_run)
-    db.flush()
+    db.commit()  # commit já aqui (não só flush) — outras sessões precisam enxergar o "running" na hora, pro guard de disparo duplicado no endpoint de trigger funcionar
 
     try:
         with JiraClient(site_settings) as client:

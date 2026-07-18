@@ -67,4 +67,4 @@ Ver `AGENTS.md` (seção Regras fáceis de esquecer) e `services/sync_service.py
 
 Primeiro sync real (2026-07-18): TEC — 9054 issues, 142 sprints, 50 pessoas, 10000 mudanças de changelog. CAP — 34 issues, 3 sprints, 4 pessoas, 70 mudanças.
 
-Execução: CLI manual (`python -m app.cli.sync --site TEC|CAP|--all`) sempre disponível. Agendamento inicial via cron do host chamando `docker compose run --rm backend python -m app.cli.sync --all`.
+Execução: CLI manual (`python -m app.cli.sync --site TEC|CAP|--all`) sempre disponível. **Também disparável pelo frontend** — aba "Atualização" (`/atualizacao`), botão "Atualizar agora" chama `POST /api/sync/trigger`, que roda o sync em background (FastAPI `BackgroundTasks`, não bloqueia a requisição) e guarda contra disparo duplicado enquanto um site já está `running` (ver `api/routes/sync.py`). `GET /api/sync/status` retorna o último `SyncRun` de cada site (status, `started_at`/`finished_at`, registros processados) — é o que popula "última atualização" na tela. Ainda não há agendamento automático (cron/scheduler) configurado — hoje o dado só atualiza quando alguém dispara manualmente (CLI ou botão).

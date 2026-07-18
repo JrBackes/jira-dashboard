@@ -2,11 +2,17 @@
 
 ## Estado Atual
 
-- **Pronto:** setup completo de ponta a ponta, primeiro sync real bem-sucedido (TEC e CAP), fluxo de status do time totalmente registrado (`docs/workflow-do-time.md`), e nova tabela **colaborador × status** com tempo (estimativa original antes de "To Test", tempo gasto depois) na tela Sprint Atual — validada com dados reais.
+- **Pronto:** setup completo de ponta a ponta, primeiro sync real bem-sucedido (TEC e CAP), fluxo de status do time totalmente registrado (`docs/workflow-do-time.md`), tabela **colaborador × status** com tempo na Sprint Atual, e nova aba **Atualização** (`/atualizacao`) com botão "Atualizar agora" (`POST /api/sync/trigger`, roda em background) e status/última atualização por site (`GET /api/sync/status`) — tudo validado via curl com dados reais.
 - **Em andamento:** nada em execução — ponto de partida limpo.
-- **Próximo passo:** abrir http://localhost:5173 (rodando) e conferir visualmente as 3 páginas com os dados reais, incluindo a nova tabela de carga de trabalho por status. Depois, decidir se/quando configurar o agendamento automático do sync (cron do host, ver `docs/jira-integration.md`).
+- **Próximo passo:** abrir http://localhost:5173 (rodando) e conferir visualmente as 4 páginas com dados reais, incluindo o botão de atualização manual. Depois, decidir se/quando configurar agendamento automático do sync (cron do host — hoje só atualiza manualmente, via CLI ou botão).
 
 ## Log
+
+### 2026-07-18 (cont. 3) — Claude Code
+- Nova aba "Atualização" no frontend, a pedido do usuário: botão "Atualizar agora" + última data de atualização por site.
+- Backend: `POST /api/sync/trigger` (dispara `sync_site` em background via FastAPI `BackgroundTasks`, guard contra disparo duplicado enquanto um site já está `running`) e `GET /api/sync/status` (último `SyncRun` por site, usado como "última atualização"). `sync_service.py` ganhou um `db.commit()` logo ao criar o `SyncRun` (antes só tinha `flush()`) — sem isso, outras sessões não enxergavam o status "running" a tempo do guard funcionar.
+- **Bug real encontrado e corrigido durante o teste**: o container do backend tinha sido criado (`docker compose up`) antes das credenciais reais do Jira serem preenchidas no `.env`. Todas as vezes que rodei `docker compose restart backend` depois disso, o container continuou com as variáveis de ambiente antigas (placeholders vazios) — `restart` não relê o `.env`, só `up --force-recreate` (ou `down`+`up`) faz isso. O sync via endpoint falhava silenciosamente (só nos logs do container, resposta HTTP continuava 200 porque roda em background) até eu descobrir isso adicionando prints de debug temporários e depois recriar o container. Registrado em `AGENTS.md` e `TASKS.md` — é um erro fácil de repetir.
+- Frontend: `SyncPage.tsx` (`/atualizacao`), `api/sync.ts`, `apiPost` adicionado em `api/client.ts`. Polling automático (React Query `refetchInterval`) enquanto algum site está `running`.
 
 ### 2026-07-18 (cont. 2) — Claude Code
 - Nova funcionalidade na Sprint Atual: tabela colaborador×status com contagem de issues + tempo por célula, a pedido do usuário.

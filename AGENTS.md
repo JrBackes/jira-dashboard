@@ -42,6 +42,7 @@ Ver `docs/data-model.md` para o schema completo e `docs/jira-integration.md` par
 - `issue_field_changes` é uma tabela genérica de changelog (qualquer campo, não só `status`). Métricas novas sobre o histórico devem ser queries sobre essa tabela, não uma tabela nova.
 - O CLI de sync **não tem subcomando `run`**: é `python -m app.cli.sync --site TEC|CAP` ou `--all` (comportamento padrão do Typer quando só há um comando registrado).
 - O `backend/Dockerfile` **não instala o Poetry** dentro da imagem — usa `pip install .` direto sobre o `pyproject.toml`. Instalar Poetry no Dockerfile causou crash (`Illegal instruction`) neste ambiente por causa de dependências transitivas do Poetry (cryptography/keyring). Ver `docs/decisions/0002-sem-poetry-no-dockerfile.md` antes de mudar isso.
+- **`docker compose restart backend` NÃO recarrega o `.env`** — só reinicia o processo com o ambiente que o container já tinha ao ser criado. Se o `.env` mudou (ex: credenciais novas/rotacionadas), é preciso `docker compose up -d --force-recreate backend` (ou `down` + `up`). Isso já causou um bug real: o container tinha sido criado antes das credenciais reais do Jira serem preenchidas, e ficou rodando com placeholders vazios por várias sessões de `restart`, falhando silenciosamente (exceção só visível nos logs do container, não na resposta HTTP) até eu recriar o container.
 
 ## Comandos de desenvolvimento
 

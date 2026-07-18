@@ -12,6 +12,7 @@ export function AppLayout() {
           <NavLink to="/" end className={navItemClass}>Visão Geral</NavLink>
           <NavLink to="/sprint-atual" className={navItemClass}>Sprint Atual</NavLink>
           <NavLink to="/pessoas" className={navItemClass}>Por Pessoa</NavLink>
+          <NavLink to="/atualizacao" className={navItemClass}>Atualização</NavLink>
         </nav>
       </header>
       <main className="app-content">

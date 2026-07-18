@@ -5,6 +5,7 @@ import { SelectedProjectProvider } from './hooks/useSelectedProject';
 import { OverviewPage } from './pages/OverviewPage';
 import { CurrentSprintPage } from './pages/CurrentSprintPage';
 import { PeoplePage } from './pages/PeoplePage';
+import { SyncPage } from './pages/SyncPage';
 import './App.css';
 
 const queryClient = new QueryClient();
@@ -19,6 +20,7 @@ function App() {
               <Route index element={<OverviewPage />} />
               <Route path="sprint-atual" element={<CurrentSprintPage />} />
               <Route path="pessoas" element={<PeoplePage />} />
+              <Route path="atualizacao" element={<SyncPage />} />
             </Route>
           </Routes>
         </BrowserRouter>
