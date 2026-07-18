@@ -18,9 +18,7 @@ Métricas da v1: (1) atuações/movimentações durante a sprint (planejado vs e
 
 ## Taxonomia do time (regra de negócio)
 
-3 tipos de issue: **Bug** (algo ocorreu fora do previsto), **História** (melhoria/desenvolvimento novo), **Tarefa** (não se encaixa nos dois acima). Também existem `Subtarefa` e `Epic` no Jira, fora dessa taxonomia de 3.
-
-Fluxo de status (ordem lógica, ver `backend/app/services/status_order.py`): **Backlog → To Do → In Progress → Is Blocked → To Test → Testing → To Review → Review → Deploy para prod**. Os nomes reais no Jira variam por questão de nomenclatura histórica (`Em andamento`≈In Progress, `Teste`≈Testing, `UNDER PR REVIEW`≈To Review) — **não são workflows diferentes por tipo de issue**, são variações do mesmo passo do fluxo. `status_category` (new/indeterminate/done) do Jira é grosseiro demais para esse time — carga de trabalho e contagem por status usam o `status` granular, não a categoria.
+3 tipos de issue: **Bug**, **História**, **Tarefa** (mais `Subtarefa`/`Epic`, fora dessa taxonomia). Fluxo de status em 11 etapas (Backlog → ... → Reviewed), com nomes reais do Jira variando por nomenclatura histórica (não por workflow diferente por tipo de issue). Detalhe completo e significado de cada status: **ver `docs/workflow-do-time.md`** — sempre consultar antes de mexer em `status_order.py` ou em qualquer lógica que agrupe/ordene status. `status_category` (new/indeterminate/done) do Jira é grosseiro demais para esse time — métricas usam o `status` granular.
 
 ## Arquitetura
 

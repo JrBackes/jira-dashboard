@@ -8,6 +8,11 @@
 
 ## Log
 
+### 2026-07-18 (cont.) — Claude Code
+- Usuário explicou 1 a 1, ao vivo, o significado de cada status que eu não sabia (`Em andamento`, `Teste`, `UNDER PR REVIEW`, `Reviewed`, `Waiting Store Approval`). Corrigiu duas suposições erradas que eu tinha feito no ajuste anterior: `Under PR Review` **não é** sinônimo de `To Review` (é revisão de código/PR, etapa própria, antes de ir pra homologação); `Reviewed` **não é** sinônimo de `Review` (é o estado final, pós-produção, revisado por todos inclusive PO). Também corrigiu a ordem: `Deploy para prod` vem **antes** de `To Review`, não depois.
+- Fluxo completo (11 etapas) registrado em `docs/workflow-do-time.md`, com tipos de issue (Bug/História/Tarefa) e significado de cada status. `AGENTS.md` atualizado pra apontar pra esse arquivo em vez de duplicar o conteúdo. `status_order.py` corrigido e revalidado contra a sprint ativa real.
+- Lição: ao inferir significado/ordem de dados de negócio a partir de nomenclatura (ex: "Reviewed" parece óbvio, mas não é), perguntar 1 a 1 em vez de assumir — já errei duas vezes nesse mapeamento antes de perguntar.
+
 ### 2026-07-18 — Claude Code
 - Repositório criado em `~/Projects/jira-dashboard-mbc`, `git init` feito, commit inicial (`cc3ffab`) e push para `https://github.com/JrBackes/jira-dashboard` (merge com README stub que o GitHub criou ao inicializar o repo).
 - Criada estrutura de documentação compartilhada entre Claude Code e Antigravity (`AGENTS.md`, `CLAUDE.md` stub, `PROGRESS.md`, `TASKS.md`, `docs/data-model.md`, `docs/jira-integration.md`, `docs/decisions/`).
