@@ -75,3 +75,47 @@ export function fetchSprintVelocityHistory(sprintId: number): Promise<VelocityPo
 export function fetchSprintWorkloadByStatus(sprintId: number): Promise<WorkloadByStatus> {
   return apiGet<WorkloadByStatus>(`/api/sprints/${sprintId}/workload-by-status`);
 }
+
+export type RiskTag = 'migrated' | 'stalled' | 'blocked' | 'behind_schedule';
+
+export interface RiskItem {
+  issue_key: string;
+  summary: string;
+  status: string;
+  assignee: string | null;
+  tags: RiskTag[];
+  days_stalled: number;
+}
+
+export interface SprintRisk {
+  days_remaining: number | null;
+  total_items: number;
+  at_risk_count: number;
+  awaiting_deploy_count: number;
+  in_production_count: number;
+  next_deploy_date: string | null;
+  items: RiskItem[];
+}
+
+export function fetchSprintRisk(sprintId: number): Promise<SprintRisk> {
+  return apiGet<SprintRisk>(`/api/sprints/${sprintId}/risk`);
+}
+
+export interface Blocker {
+  issue_key: string;
+  summary: string;
+  status: string | null;
+}
+
+export interface BlockedItem {
+  issue_key: string;
+  summary: string;
+  assignee: string | null;
+  blockers: Blocker[];
+  blocked_since: string;
+  days_blocked: number;
+}
+
+export function fetchSprintBlocked(sprintId: number): Promise<BlockedItem[]> {
+  return apiGet<BlockedItem[]>(`/api/sprints/${sprintId}/blocked`);
+}

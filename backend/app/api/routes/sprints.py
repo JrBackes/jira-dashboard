@@ -47,3 +47,15 @@ def sprint_velocity_history(sprint_id: int, limit: int = 6, db: Session = Depend
 def sprint_workload_by_status(sprint_id: int, db: Session = Depends(get_db)):
     _get_sprint_or_404(db, sprint_id)
     return sprint_metrics.sprint_workload_by_status_and_person(db, sprint_id)
+
+
+@router.get("/{sprint_id}/risk")
+def sprint_risk(sprint_id: int, db: Session = Depends(get_db)):
+    sprint = _get_sprint_or_404(db, sprint_id)
+    return sprint_metrics.sprint_risk_items(db, sprint)
+
+
+@router.get("/{sprint_id}/blocked")
+def sprint_blocked(sprint_id: int, db: Session = Depends(get_db)):
+    _get_sprint_or_404(db, sprint_id)
+    return sprint_metrics.sprint_blocked_items(db, sprint_id)

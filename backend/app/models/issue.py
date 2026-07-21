@@ -33,6 +33,10 @@ class Issue(Base):
     # Segundos — campos nativos de time tracking do Jira (o time não usa Story Points).
     original_estimate_seconds: Mapped[int | None] = mapped_column(nullable=True)
     time_spent_seconds: Mapped[int | None] = mapped_column(nullable=True)
+    # Campo de sistema "parent" do Jira — pra issues de nível 0 (Tarefa/História/Bug) é o Epic;
+    # pra Subtarefas é o item pai (não necessariamente um Epic). Sem FK: o parent pode ainda não
+    # ter sido sincronizado. Usado pra vincular issues ao Mapa de Tecnologia via Epic.
+    parent_jira_key: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column()
     updated_at: Mapped[datetime] = mapped_column()

@@ -72,6 +72,9 @@ def map_issue(issue: dict, story_points_field: str | None, sprint_field: str | N
         # O time não usa Story Points; usa "Estimativa original" e apontamento manual de horas.
         "original_estimate_seconds": fields.get("timeoriginalestimate"),
         "time_spent_seconds": fields.get("timespent"),
+        # Campo de sistema "parent" — pra issues de nível 0 é o Epic; usado pra vincular ao
+        # Mapa de Tecnologia (ver TechMapEntry.epic_jira_key).
+        "parent_jira_key": (fields.get("parent") or {}).get("key"),
         "created_at": parse_jira_datetime(fields.get("created")),
         "updated_at": parse_jira_datetime(fields.get("updated")),
         "resolved_at": parse_jira_datetime(fields.get("resolutiondate")),
@@ -79,6 +82,37 @@ def map_issue(issue: dict, story_points_field: str | None, sprint_field: str | N
         "sprint_jira_ids": sprint_jira_ids,
         "current_sprint_jira_id": current_sprint_jira_id,
     }
+
+
+def map_issue_links(issue: dict) -> list[dict]:
+    """Achata `fields.issuelinks[]` — cada entrada tem `inwardIssue` OU `outwardIssue`, nunca os dois.
+
+    `type.inward`/`type.outward` são o texto legível da relação a partir desta issue (ex: para
+    o tipo "Blocks", inward = "is blocked by", outward = "blocks"). "Motivo de bloqueio" é
+    filtrar por `link_type_name == "Blocks"` e `direction == "inward"` sobre o resultado disto.
+    """
+    links: list[dict] = []
+    for link in issue["fields"].get("issuelinks") or []:
+        link_type = link.get("type") or {}
+        if "inwardIssue" in link:
+            direction, label, target = "inward", link_type.get("inward", ""), link["inwardIssue"]
+        elif "outwardIssue" in link:
+            direction, label, target = "outward", link_type.get("outward", ""), link["outwardIssue"]
+        else:
+            continue
+        target_fields = target.get("fields") or {}
+        links.append(
+            {
+                "jira_link_id": link["id"],
+                "link_type_name": link_type.get("name", "Unknown"),
+                "direction": direction,
+                "label": label,
+                "linked_jira_key": target["key"],
+                "linked_summary": target_fields.get("summary") or "",
+                "linked_status": (target_fields.get("status") or {}).get("name"),
+            }
+        )
+    return links
 
 
 def map_changelog_entries(issue_changelog: dict) -> list[dict]:

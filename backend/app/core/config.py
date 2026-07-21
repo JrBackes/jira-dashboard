@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     jira_cap_email: str = ""
     jira_cap_api_token: str = ""
 
+    # Mapa de Tecnologia: sem credencial nenhuma do Google (Cloud fora de alcance, planilha não
+    # pode ficar com link público) — importado por colar/paste manual, ver tech_map_service.py.
+    # Só um rótulo padrão pra identificar a aba importada, não uma credencial de acesso.
+    tech_map_sheet_name: str = "[Desenvolvimento] Planejamento Q3"
+
     def jira_site_settings(self, site_key: str) -> JiraSiteSettings:
         site_key = site_key.upper()
         prefix = f"jira_{site_key.lower()}_"

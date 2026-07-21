@@ -16,12 +16,14 @@ from app.integrations.jira.mappers import (
     map_board,
     map_changelog_entries,
     map_issue,
+    map_issue_links,
     map_sprint,
 )
 from app.models import (
     Board,
     Issue,
     IssueFieldChange,
+    IssueLink,
     IssueSprint,
     Person,
     PersonIdentity,
@@ -98,16 +100,26 @@ def _resolve_person(db: Session, site: Site, account: dict | None) -> int | None
         db.flush()
         return identity.person_id
 
-    person = None
-    if email:
-        person = db.query(Person).filter_by(email=email).one_or_none()
-    if person is None:
+    # O mesmo accountId pode aparecer em mais de um site quando os sites compartilham a
+    # mesma organização Atlassian — achado real (2026-07-18): robert.bonfada e Victor Amaral
+    # tinham o mesmo accountId em TEC e CAP, mas sem e-mail visível via API pra deduplicar
+    # pelo caminho abaixo, o que criava duas pessoas canônicas para a mesma pessoa. Checar
+    # por accountId (em qualquer site) antes de cair pro fallback de e-mail.
+    other_site_identity = db.query(PersonIdentity).filter_by(jira_account_id=account_id).one_or_none()
+    person_id = other_site_identity.person_id if other_site_identity else None
+
+    if person_id is None and email:
+        existing_person = db.query(Person).filter_by(email=email).one_or_none()
+        person_id = existing_person.id if existing_person else None
+
+    if person_id is None:
         person = Person(display_name=display_name, email=email)
         db.add(person)
         db.flush()
+        person_id = person.id
 
     identity = PersonIdentity(
-        person_id=person.id,
+        person_id=person_id,
         site_id=site.id,
         jira_account_id=account_id,
         display_name=display_name,
@@ -116,7 +128,7 @@ def _resolve_person(db: Session, site: Site, account: dict | None) -> int | None
     )
     db.add(identity)
     db.flush()
-    return person.id
+    return person_id
 
 
 def _upsert_issue(
@@ -162,34 +174,65 @@ def _upsert_issue(
                 link.is_current = is_current
         db.flush()
 
+    _upsert_issue_links(db, issue, issue_payload)
+
     return issue
+
+
+def _upsert_issue_links(db: Session, issue: Issue, issue_payload: dict) -> None:
+    """Substitui os vínculos da issue pelo estado atual do Jira (adiciona novos, atualiza
+    existentes, remove os que não aparecem mais — ex: desbloqueio removendo o vínculo)."""
+    links_data = map_issue_links(issue_payload)
+    existing = {link.jira_link_id: link for link in db.query(IssueLink).filter_by(issue_id=issue.id)}
+    seen_ids: set[str] = set()
+    for data in links_data:
+        jira_link_id = data.pop("jira_link_id")
+        seen_ids.add(jira_link_id)
+        link = existing.get(jira_link_id)
+        if link is None:
+            db.add(IssueLink(issue_id=issue.id, jira_link_id=jira_link_id, **data))
+        else:
+            for key, value in data.items():
+                setattr(link, key, value)
+    for jira_link_id, link in existing.items():
+        if jira_link_id not in seen_ids:
+            db.delete(link)
+    db.flush()
 
 
 def _sync_changelog_for_issues(
     db: Session, client: JiraClient, site: Site, sync_run: SyncRun, issues: list[Issue]
 ) -> int:
+    """A paginação do `changelog/bulkfetch` (`nextPageToken` dentro de cada lote — ver
+    `JiraClient.fetch_changelogs_bulk`) pode devolver a mesma entrada de histórico mais de
+    uma vez (overlap entre páginas). `seen_entry_ids` deduplica dentro desta própria chamada:
+    a sessão usa `autoflush=False` (`core/db.py`), então a query `existing` abaixo não
+    enxerga um `db.add()` anterior ainda não commitado — sem esse set, a segunda ocorrência
+    vira um `UniqueViolation` só na hora do commit final, desfazendo o sync inteiro.
+    """
     if not issues:
         return 0
     by_jira_id = {issue.jira_issue_id: issue for issue in issues}
     changelogs = client.fetch_changelogs_bulk(list(by_jira_id.keys()))
     count = 0
+    seen_entry_ids: set[str] = set()
     for issue_changelog in changelogs:
         issue = by_jira_id.get(str(issue_changelog["issueId"]))
         if issue is None:
             continue
         for entry in map_changelog_entries(issue_changelog):
-            existing = (
-                db.query(IssueFieldChange)
-                .filter_by(jira_changelog_entry_id=entry["jira_changelog_entry_id"])
-                .one_or_none()
-            )
+            entry_id = entry["jira_changelog_entry_id"]
+            if entry_id in seen_entry_ids:
+                continue
+            seen_entry_ids.add(entry_id)
+            existing = db.query(IssueFieldChange).filter_by(jira_changelog_entry_id=entry_id).one_or_none()
             if existing:
                 continue
             changed_by_person_id = _resolve_person(db, site, entry["author"])
             db.add(
                 IssueFieldChange(
                     issue_id=issue.id,
-                    jira_changelog_entry_id=entry["jira_changelog_entry_id"],
+                    jira_changelog_entry_id=entry_id,
                     field_name=entry["field_name"],
                     from_value=entry["from_value"],
                     to_value=entry["to_value"],

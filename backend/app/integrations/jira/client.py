@@ -17,6 +17,8 @@ DEFAULT_SEARCH_FIELDS = [
     "resolutiondate",
     "timeoriginalestimate",
     "timespent",
+    "issuelinks",
+    "parent",
 ]
 # Não existem campos literais "sprint"/"closedSprints" no Platform Search API v3 — isso é
 # só da Agile API. Aqui o campo Sprint é um customfield (ver mappers.find_sprint_field),
@@ -122,13 +124,27 @@ class JiraClient:
 
         A API rejeita (400) lotes grandes demais num único request — paginamos em
         lotes de `batch_size` (1000 já confirmado como aceito) e concatenamos o resultado.
+
+        Bug real encontrado (2026-07-18): a resposta em si já vem paginada por
+        `nextPageToken` **dentro de cada lote** — um lote de 1000 issueIds pode retornar
+        só ~50 `issueChangeLogs` na primeira página. Sem seguir esse token, ~90% das issues
+        ficavam silenciosamente sem changelog nenhum (sync reportava "success", sem erro).
         """
         if not issue_ids:
             return []
         results: list[dict] = []
         for start in range(0, len(issue_ids), batch_size):
             batch = issue_ids[start : start + batch_size]
-            resp = self._client.post("/rest/api/3/changelog/bulkfetch", json={"issueIdsOrKeys": batch})
-            resp.raise_for_status()
-            results.extend(resp.json()["issueChangeLogs"])
+            next_page_token: str | None = None
+            while True:
+                body: dict[str, Any] = {"issueIdsOrKeys": batch}
+                if next_page_token:
+                    body["nextPageToken"] = next_page_token
+                resp = self._client.post("/rest/api/3/changelog/bulkfetch", json=body)
+                resp.raise_for_status()
+                data = resp.json()
+                results.extend(data["issueChangeLogs"])
+                next_page_token = data.get("nextPageToken")
+                if not next_page_token:
+                    break
         return results

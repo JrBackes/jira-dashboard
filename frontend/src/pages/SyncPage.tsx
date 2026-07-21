@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchSyncStatus, triggerSync } from '../api/sync';
+import { importTechMap } from '../api/techMap';
 
 function formatDateTime(iso: string): string {
   return new Date(`${iso}Z`).toLocaleString('pt-BR');
@@ -16,6 +17,11 @@ export function SyncPage() {
   const [hasSeenRunning, setHasSeenRunning] = useState(false);
   const [triggerError, setTriggerError] = useState<string | null>(null);
   const wasUpdatingRef = useRef(false);
+
+  const [techMapTsv, setTechMapTsv] = useState('');
+  const [techMapStatus, setTechMapStatus] = useState<string | null>(null);
+  const [techMapError, setTechMapError] = useState<string | null>(null);
+  const [isImportingTechMap, setIsImportingTechMap] = useState(false);
 
   // refetchInterval como valor reativo simples (não como função inspecionando query.state.data) —
   // continua fazendo polling enquanto estamos "no meio" de uma atualização disparada por nós,
@@ -74,6 +80,21 @@ export function SyncPage() {
     }
   };
 
+  const handleImportTechMap = async () => {
+    setTechMapError(null);
+    setTechMapStatus(null);
+    setIsImportingTechMap(true);
+    try {
+      const result = await importTechMap(techMapTsv);
+      setTechMapStatus(`${result.entries_imported} linha(s) importada(s) com sucesso.`);
+      await queryClient.invalidateQueries({ queryKey: ['sprint-tech-map'] });
+    } catch (err) {
+      setTechMapError(err instanceof Error ? err.message : 'Não consegui importar — confira o texto colado.');
+    } finally {
+      setIsImportingTechMap(false);
+    }
+  };
+
   return (
     <div>
       <h2>Atualização</h2>
@@ -118,6 +139,29 @@ export function SyncPage() {
           Algum site falhou na última tentativa — veja a mensagem de erro no backend (tabela `sync_runs`).
         </p>
       )}
+
+      <section style={{ marginTop: '2.5rem' }}>
+        <h3>Mapa de Tecnologia</h3>
+        <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
+          Sem sync automático (planilha não pode ficar acessível por link, sem credencial do Google). Abra a
+          planilha, selecione a aba "[Desenvolvimento] Planejamento Q3" inteira (incluindo a linha de
+          cabeçalho), copie (Ctrl+C) e cole abaixo.
+        </p>
+        <textarea
+          value={techMapTsv}
+          onChange={(e) => setTechMapTsv(e.target.value)}
+          rows={8}
+          style={{ width: '100%', fontFamily: 'monospace', fontSize: '0.8rem' }}
+          placeholder="Cole aqui o conteúdo copiado do Google Sheets..."
+        />
+        <div style={{ marginTop: '0.5rem' }}>
+          <button onClick={handleImportTechMap} disabled={isImportingTechMap || !techMapTsv.trim()}>
+            {isImportingTechMap ? 'Importando...' : 'Importar'}
+          </button>
+        </div>
+        {techMapStatus && <p style={{ color: '#16a34a' }}>{techMapStatus}</p>}
+        {techMapError && <p style={{ color: '#dc2626' }}>{techMapError}</p>}
+      </section>
     </div>
   );
 }

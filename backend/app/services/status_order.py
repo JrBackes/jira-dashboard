@@ -43,3 +43,8 @@ def sort_statuses(counts: dict[str, int]) -> dict[str, int]:
 def sort_status_list(statuses: set[str] | list[str]) -> list[str]:
     """Mesma ordem lógica, mas pra uma lista de nomes de status (sem contagem)."""
     return sorted(statuses, key=_rank)
+
+
+def is_blocked(status: str) -> bool:
+    """Status 'Is Blocked' explícito — pode ocorrer a qualquer momento do fluxo, não é uma etapa sequencial."""
+    return status.strip().lower() in {"is blocked"}

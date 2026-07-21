@@ -1,15 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
+import { BlockedItemsPanel } from '../components/BlockedItemsPanel';
 import { BurndownChart } from '../components/charts/BurndownChart';
 import { VelocityChart } from '../components/charts/VelocityChart';
+import { SprintRiskPanel } from '../components/SprintRiskPanel';
 import { SprintWorkloadTable } from '../components/SprintWorkloadTable';
+import { TechMapPanel } from '../components/TechMapPanel';
 import {
+  fetchSprintBlocked,
   fetchSprintBurndown,
+  fetchSprintRisk,
   fetchSprintScopeChanges,
   fetchSprintSummary,
   fetchSprintVelocityHistory,
   fetchSprintWorkloadByStatus,
   fetchSprints,
 } from '../api/sprints';
+import { fetchTechMapForSprint } from '../api/techMap';
 import { useSelectedProject } from '../hooks/useSelectedProject';
 
 export function CurrentSprintPage() {
@@ -47,6 +53,21 @@ export function CurrentSprintPage() {
     queryFn: () => fetchSprintWorkloadByStatus(sprintId!),
     enabled: !!sprintId,
   });
+  const { data: risk } = useQuery({
+    queryKey: ['sprint-risk', sprintId],
+    queryFn: () => fetchSprintRisk(sprintId!),
+    enabled: !!sprintId,
+  });
+  const { data: blocked } = useQuery({
+    queryKey: ['sprint-blocked', sprintId],
+    queryFn: () => fetchSprintBlocked(sprintId!),
+    enabled: !!sprintId,
+  });
+  const { data: techMap } = useQuery({
+    queryKey: ['sprint-tech-map', sprintId],
+    queryFn: () => fetchTechMapForSprint(sprintId!),
+    enabled: !!sprintId,
+  });
 
   if (!activeSprints) return <p>Carregando...</p>;
   if (!sprint) return <p>Nenhuma sprint ativa encontrada para {projectKey}. Rode o sync do Jira primeiro.</p>;
@@ -64,6 +85,27 @@ export function CurrentSprintPage() {
               <li key={status}>{status}: {count}</li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {risk && (
+        <section>
+          <h3>Itens em risco</h3>
+          <SprintRiskPanel data={risk} />
+        </section>
+      )}
+
+      {blocked && (
+        <section>
+          <h3>Itens bloqueados</h3>
+          <BlockedItemsPanel items={blocked} />
+        </section>
+      )}
+
+      {techMap && (
+        <section>
+          <h3>Mapa de Tecnologia</h3>
+          <TechMapPanel groups={techMap} />
         </section>
       )}
 
